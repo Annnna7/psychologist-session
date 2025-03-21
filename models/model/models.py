@@ -1,8 +1,14 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Table
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Table
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship
+from datetime import datetime
+from passlib.context import CryptContext
+from zoneinfo import ZoneInfo
 
 Base = declarative_base()
+
+# Настроим хеширование паролей
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Модель Пользователь (User)
 class User(Base):
@@ -20,6 +26,14 @@ class User(Base):
 
     def __repr__(self):
         return f"<User(id={self.id}, full_name={self.full_name})>"
+    
+    # Метод для хэширования пароля
+    def set_password(self, password):
+        self.password = pwd_context.hash(password)
+
+    # Метод для проверки пароля
+    def verify_password(self, password):
+        return pwd_context.verify(password, self.password)
 
 # Модель Браслет (Bracelet)
 class Bracelet(Base):
