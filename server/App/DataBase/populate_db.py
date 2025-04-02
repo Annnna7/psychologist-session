@@ -5,10 +5,10 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from datetime import datetime, timedelta
-from database.database import engine
+from DataBase import engine
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from model.models import Base, User, Bracelet, Psychologist, Session, Notification
+from DataBase.models import Base, User, Bracelet, Psychologist, Session, Notification
 from passlib.context import CryptContext
 
 # Настроим хеширование паролей
@@ -133,9 +133,9 @@ def create_notifications():
         print("Не хватает данных для создания уведомлений")
 
 # Запуск
-# if __name__ == "__main__":
-#     create_users()
-#     create_bracelets()
-#     create_psychologists()
-#     create_sessions()
-#     session.close()
+if __name__ == "__main__":
+    create_users()
+    create_bracelets()
+    create_psychologists()
+    create_sessions()
+    session.close()
