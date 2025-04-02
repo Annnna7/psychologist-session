@@ -1,22 +1,32 @@
 import sys
 import os
-
-# Добавляем корневую папку проекта в sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 from datetime import datetime, timedelta
-from DataBase import engine
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from DataBase.models import Base, User, Bracelet, Psychologist, Session, Notification
 from passlib.context import CryptContext
+
+# Добавляем корневую папку проекта в sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
+
+# Импортируем модели напрямую
+from server.App.DataBase.base import Base
+from server.App.DataBase.models.user import User
+from server.App.DataBase.models.bracelet import Bracelet
+from server.App.DataBase.models.psychologist import Psychologist
+from server.App.DataBase.models.session import Session
+from server.App.DataBase.models.notification import Notification
+
+# Настройка подключения к БД
+DATABASE_URL = "postgresql://postgres:123@localhost:5433/DataBase"
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+session = SessionLocal()
 
 # Настроим хеширование паролей
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Создание сессии
-SessionLocal = sessionmaker(bind=engine)
-session = SessionLocal()
+# Создание таблиц (если их нет)
+Base.metadata.create_all(bind=engine)
 
 # Функция для создания тестовых пользователей
 def create_users():
