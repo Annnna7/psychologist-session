@@ -9,12 +9,12 @@ from passlib.context import CryptContext
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
 # Импортируем модели напрямую
-from server.App.DataBase.base import Base
-from server.App.DataBase.models.user import User
-from server.App.DataBase.models.bracelet import Bracelet
-from server.App.DataBase.models.psychologist import Psychologist
-from server.App.DataBase.models.session import Session
-from server.App.DataBase.models.notification import Notification
+from server.app.dataBase.base import Base
+from server.app.dataBase.models.user import User
+from server.app.dataBase.models.bracelet import Bracelet
+from server.app.dataBase.models.psychologist import Psychologist
+from server.app.dataBase.models.session import Session
+from server.app.dataBase.models.notification import Notification
 
 # Настройка подключения к БД
 DATABASE_URL = "postgresql://postgres:123@localhost:5433/DataBase"
