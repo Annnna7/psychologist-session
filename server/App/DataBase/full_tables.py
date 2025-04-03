@@ -142,7 +142,11 @@ def create_notifications():
     else:
         print("Не хватает данных для создания уведомлений")
 
+<<<<<<< Updated upstream:server/App/DataBase/full_tables.py
 # Запуск
+=======
+#Запуск
+>>>>>>> Stashed changes:models/populate_db.py
 if __name__ == "__main__":
     create_users()
     create_bracelets()
