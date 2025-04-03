@@ -9,12 +9,12 @@ from sqlalchemy import engine_from_config, pool
 sys.path.insert(0, dirname(dirname(abspath(__file__))))
 
 # Эти импорты должны быть после добавления пути в sys.path
-from App.DataBase.base import Base
-from App.DataBase.models.user import User  # Явный импорт всех моделей
-from App.DataBase.models.psychologist import Psychologist
-from App.DataBase.models.bracelet import Bracelet
-from App.DataBase.models.session import Session
-from App.DataBase.models.notification import Notification
+from app.dataBase.base import Base
+from app.dataBase.models.user import User  # Явный импорт всех моделей
+from app.dataBase.models.psychologist import Psychologist
+from app.dataBase.models.bracelet import Bracelet
+from app.dataBase.models.session import Session
+from app.dataBase.models.notification import Notification
 
 # Это важно для autogenerate
 target_metadata = Base.metadata

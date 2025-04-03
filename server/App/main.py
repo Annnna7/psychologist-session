@@ -11,6 +11,7 @@ from server.app.dataBase.models.psychologist import Psychologist
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
+
 # Импортируем роутеры
 from server.app.api.endpoints import (
     auth, 
@@ -22,8 +23,8 @@ from server.app.api.endpoints import (
 )
 
 # Подключение к базе данных
-DATABASE_URL = "postgresql+asyncpg://postgres:123@localhost:5433/DataBase"
-SYNC_DATABASE_URL = "postgresql://postgres:123@localhost:5433/DataBase"
+DATABASE_URL = "postgresql+asyncpg://postgres:1508@localhost:5433/DataBase"
+SYNC_DATABASE_URL = "postgresql://postgres:1508@localhost:5433/DataBase"
 
 # Создаем асинхронный engine для FastAPI
 engine = create_async_engine(DATABASE_URL)
@@ -80,6 +81,15 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="Psychologist Session API", lifespan=lifespan)
+
+@app.get("/")
+def read_root():
+    return {
+        "message": "Welcome to Psychologist Session API",
+        "docs": "http://127.0.0.1:8000/docs",
+        "redoc": "http://127.0.0.1:8000/redoc"
+    }
+
         
 # Запуск
 if __name__ == "main":
