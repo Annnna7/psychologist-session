@@ -2,17 +2,101 @@ from fastapi import FastAPI
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from server.app.dataBase.base import Base
-from server.app.dataBase.models.user import User
-from server.app.dataBase.models.session import Session
-from server.app.dataBase.models.bracelet import Bracelet
-from server.app.dataBase.models.notification import Notification
-from server.app.dataBase.models.psychologist import Psychologist
-from datetime import datetime
-from sqlalchemy.exc import IntegrityError
+from contextlib import asynccontextmanager
+import asyncio
 
+# Перенесем импорт роутеров после создания app, чтобы избежать циклических импортов
 
-# Импортируем роутеры
+# Подключение к базе данных
+DATABASE_URL = "postgresql+asyncpg://postgres:123@localhost:5433/DataBase"
+SYNC_DATABASE_URL = "postgresql://postgres:123@localhost:5433/DataBase"
+
+# Создаем асинхронный engine с настройками
+engine = create_async_engine(
+    DATABASE_URL,
+    pool_size=20,
+    max_overflow=10,
+    pool_timeout=30,
+    echo=True
+)
+
+# Синхронный engine только для миграций
+sync_engine = create_engine(SYNC_DATABASE_URL)
+
+# Асинхронная сессия
+AsyncSessionLocal = sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autoflush=False
+)
+
+async def get_db():
+    """Генератор асинхронной сессии для зависимостей"""
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
+
+async def check_async_connection():
+    """Проверка асинхронного подключения"""
+    async with AsyncSessionLocal() as session:
+        try:
+            await session.execute(text("SELECT 1"))
+            print("✓ Асинхронное подключение к БД успешно")
+        except Exception as e:
+            print(f"× Ошибка асинхронного подключения: {e}")
+
+def check_sync_connection():
+    """Проверка синхронного подключения (для миграций)"""
+    try:
+        with sync_engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        print("✓ Синхронное подключение к БД успешно")
+    except Exception as e:
+        print(f"× Ошибка синхронного подключения: {e}")
+
+def create_tables():
+    """Создание таблиц (синхронно, для Alembic)"""
+    from server.app.dataBase.base import Base  # Локальный импорт для избежания циклических зависимостей
+    try:
+        Base.metadata.create_all(bind=sync_engine)
+        print("✓ Таблицы созданы/проверены")
+    except Exception as e:
+        print(f"× Ошибка создания таблиц: {e}")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Контекст жизненного цикла приложения"""
+    print("\n" + "="*50)
+    print("Запуск инициализации приложения...")
+    
+    # Проверка подключений
+    check_sync_connection()
+    await check_async_connection()
+    create_tables()
+    
+    print("Инициализация завершена успешно!")
+    print("="*50 + "\n")
+    
+    yield
+    
+    # При завершении работы
+    await engine.dispose()
+    sync_engine.dispose()
+    print("✓ Подключения к БД корректно закрыты")
+
+app = FastAPI(
+    title="Psychologist Session API",
+    description="API для системы психологических сессий",
+    version="1.0.0",
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+# Теперь импортируем роутеры после создания app
 from server.app.api.endpoints import (
     auth, 
     user, 
@@ -22,77 +106,28 @@ from server.app.api.endpoints import (
     bracelet
 )
 
-# Подключение к базе данных
-DATABASE_URL = "postgresql+asyncpg://postgres:1508@localhost:5433/DataBase"
-SYNC_DATABASE_URL = "postgresql://postgres:1508@localhost:5433/DataBase"
-
-# Создаем асинхронный engine для FastAPI
-engine = create_async_engine(DATABASE_URL)
-# Создаем синхронный engine для проверки подключения
-sync_engine = create_engine(SYNC_DATABASE_URL)
-
-# Создаем сессии
-SessionLocal = sessionmaker(
-    autocommit=False, 
-    autoflush=False, 
-    bind=sync_engine
-)
-AsyncSessionLocal = sessionmaker(
-    engine, 
-    class_=AsyncSession,
-    expire_on_commit=False
-)
-
-# Создаем FastAPI приложение
-app = FastAPI(title="Psychologist Session API")
-
 # Подключаем роутеры
-app.include_router(auth.router)
-app.include_router(user.router)
-app.include_router(psychologist.router)
-app.include_router(session.router)
-app.include_router(notification.router)
-app.include_router(bracelet.router)
+app.include_router(auth.router, prefix="/api", tags=["Аутентификация"])
+app.include_router(user.router, prefix="/api/users", tags=["Пользователи"])
+app.include_router(psychologist.router, prefix="/api/psychologists", tags=["Психологи"])
+app.include_router(session.router, prefix="/api/sessions", tags=["Сессии"])
+app.include_router(notification.router, prefix="/api/notifications", tags=["Уведомления"])
+app.include_router(bracelet.router, prefix="/api/bracelets", tags=["Браслеты"])
 
-async def get_db():
-    async with AsyncSessionLocal() as session:
-        yield session
-
-def check_connection_and_create_tables():
-    try:
-        # Создание всех таблиц, если их нет
-        Base.metadata.create_all(bind=sync_engine)
-        print("Таблицы созданы или уже существуют")
-
-        # Пробуем выполнить запрос
-        with SessionLocal() as session:
-            session.execute(text("SELECT 1"))  # Используем text() для запроса
-            print("Подключение к базе данных успешно!")
-
-    except Exception as e:
-        print(f"Ошибка подключения: {e}")
-
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    check_connection_and_create_tables()
-    yield
-
-app = FastAPI(title="Psychologist Session API", lifespan=lifespan)
-
-@app.get("/")
-def read_root():
+@app.get("/", include_in_schema=False)
+async def root():
     return {
-        "message": "Welcome to Psychologist Session API",
-        "docs": "http://127.0.0.1:8000/docs",
-        "redoc": "http://127.0.0.1:8000/redoc"
+        "message": "Добро пожаловать в Psychologist Session API",
+        "docs": "/docs",
+        "redoc": "/redoc"
     }
 
-        
-# Запуск
-if __name__ == "main":
+if __name__ == "__main__":
     import uvicorn
-    check_connection_and_create_tables()
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        workers=1
+    )

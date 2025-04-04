@@ -23,6 +23,11 @@ class User(Base):
     psychologists = relationship('Psychologist', secondary='user_psychologist', back_populates='users')
     sessions = relationship('Session', back_populates='user')
 
+    # Добавляем property для совместимости с вашим кодом
+    @property
+    def hashed_password(self):
+        return self.password
+    
     def set_password(self, password):
         self.password = pwd_context.hash(password)
 
