@@ -5,6 +5,7 @@ from typing import List, Optional
 class UserBase(BaseModel):
     full_name: str
     username: str
+    password: str   # Обязательное поле
 
 class UserCreate(UserBase):
     password: str
@@ -17,6 +18,7 @@ class User(UserBase):
         from_attributes = True
 
 class PsychologistBase(BaseModel):
+    id: int
     full_name: str
     specialty: str
     rating: float

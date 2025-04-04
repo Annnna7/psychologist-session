@@ -9,7 +9,7 @@ from ..base import Base
 # Модель Сеанс (Session)
 class Session(Base):
     __tablename__ = 'sessions'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.id'))
     psychologist_id = Column(Integer, ForeignKey('psychologists.id'))
     date_time = Column(DateTime, nullable=False)
