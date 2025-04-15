@@ -18,7 +18,6 @@ class User(UserBase):
         from_attributes = True
 
 class PsychologistBase(BaseModel):
-    id: int
     full_name: str
     specialty: str
     rating: float

@@ -1,110 +1,60 @@
-from fastapi import FastAPI
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from contextlib import asynccontextmanager
-import asyncio
+from fastapi import FastAPI, Depends
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
+from contextlib import contextmanager
+from sqlalchemy import text
+import logging
 
-# Перенесем импорт роутеров после создания app, чтобы избежать циклических импортов
+# Настройка логгера
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Подключение к базе данных
-DATABASE_URL = "postgresql+asyncpg://postgres:123@localhost:5433/DataBase"
-SYNC_DATABASE_URL = "postgresql://postgres:123@localhost:5433/DataBase"
+# Подключение к БД
+DATABASE_URL = "postgresql://postgres:123@localhost:5433/DataBase"
+engine = create_engine(DATABASE_URL, pool_size=20, max_overflow=10)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Создаем асинхронный engine с настройками
-engine = create_async_engine(
-    DATABASE_URL,
-    pool_size=20,
-    max_overflow=10,
-    pool_timeout=30,
-    echo=True
-)
-
-# Синхронный engine только для миграций
-sync_engine = create_engine(SYNC_DATABASE_URL)
-
-# Асинхронная сессия
-AsyncSessionLocal = sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autoflush=False
-)
-
-async def get_db():
-    """Генератор асинхронной сессии для зависимостей"""
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
-
-async def check_async_connection():
-    """Проверка асинхронного подключения"""
-    async with AsyncSessionLocal() as session:
-        try:
-            await session.execute(text("SELECT 1"))
-            print("✓ Асинхронное подключение к БД успешно")
-        except Exception as e:
-            print(f"× Ошибка асинхронного подключения: {e}")
-
-def check_sync_connection():
-    """Проверка синхронного подключения (для миграций)"""
+# Dependency для получения сессии
+def get_db():
+    db = SessionLocal()
     try:
-        with sync_engine.connect() as conn:
+        yield db
+    finally:
+        db.close()
+
+def check_connection():
+    try:
+        with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        print("✓ Синхронное подключение к БД успешно")
+        logger.info("✓ Подключение к БД успешно")
     except Exception as e:
-        print(f"× Ошибка синхронного подключения: {e}")
+        logger.error(f"× Ошибка подключения: {e}")
+        raise
 
 def create_tables():
-    """Создание таблиц (синхронно, для Alembic)"""
-    from server.app.dataBase.base import Base  # Локальный импорт для избежания циклических зависимостей
+    from server.app.dataBase.base import Base
     try:
-        Base.metadata.create_all(bind=sync_engine)
-        print("✓ Таблицы созданы/проверены")
+        Base.metadata.create_all(bind=engine)
+        logger.info("✓ Таблицы созданы/проверены")
     except Exception as e:
-        print(f"× Ошибка создания таблиц: {e}")
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Контекст жизненного цикла приложения"""
-    print("\n" + "="*50)
-    print("Запуск инициализации приложения...")
-    
-    # Проверка подключений
-    check_sync_connection()
-    await check_async_connection()
-    create_tables()
-    
-    print("Инициализация завершена успешно!")
-    print("="*50 + "\n")
-    
-    yield
-    
-    # При завершении работы
-    await engine.dispose()
-    sync_engine.dispose()
-    print("✓ Подключения к БД корректно закрыты")
+        logger.error(f"× Ошибка создания таблиц: {e}")
+        raise
 
 app = FastAPI(
     title="Psychologist Session API",
-    description="API для системы психологических сессий",
-    version="1.0.0",
-    lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc"
+    version="1.0.0"
 )
 
-# Теперь импортируем роутеры после создания app
-from server.app.api.endpoints import (
-    auth, 
-    user, 
-    psychologist, 
-    session, 
-    notification, 
-    bracelet
-)
+# Инициализация при старте
+@app.on_event("startup")
+def startup():
+    logger.info("Запуск инициализации...")
+    check_connection()
+    create_tables()
+    logger.info("Инициализация завершена")
+
+# Подключение роутеров (синхронные версии)
+from server.app.api.endpoints import user, auth, psychologist, session, notification, bracelet  # и другие
 
 # Подключаем роутеры
 app.include_router(auth.router, prefix="/api", tags=["Аутентификация"])
@@ -124,10 +74,4 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        workers=1
-    )
+    uvicorn.run(app, host="0.0.0.0", port=8000)

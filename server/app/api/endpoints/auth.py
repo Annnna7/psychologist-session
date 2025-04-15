@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy.orm import Session
+from sqlalchemy import select
 from datetime import timedelta, datetime
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -24,11 +24,10 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
 
-async def authenticate_user(username: str, password: str, db: AsyncSession):
+def authenticate_user(username: str, password: str, db: Session):
     try:
         print(f"Searching for user: {username}")
-        result = await db.execute(select(User).where(User.username == username))
-        user = result.scalar_one_or_none()
+        user = db.query(User).filter(User.username == username).first()
         
         if not user:
             print("User not found")
@@ -55,13 +54,13 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 @router.post("/token", response_model=Token)
-async def login_for_access_token(
+def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    db: AsyncSession = Depends(get_db)
+    db: Session = Depends(get_db)
 ):
     print(f"\nAttempting login for user: {form_data.username}")
     
-    user = await authenticate_user(form_data.username, form_data.password, db)
+    user = authenticate_user(form_data.username, form_data.password, db)
     
     if not user:
         print("Authentication failed")
