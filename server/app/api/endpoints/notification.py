@@ -13,8 +13,13 @@ router = APIRouter()
 def create_notification(
     notification: NotificationCreate, 
     db: Session = Depends(get_db)
-):
-    db_notification = NotificationModel(**notification.dict())
+):  
+    # Создаем уведомление
+    db_notification = NotificationModel(
+        bracelet_id=notification.bracelet_id,
+        session_id=notification.session_id,
+        message_type=notification.message_type
+    )
     
     db.add(db_notification)
     db.commit()

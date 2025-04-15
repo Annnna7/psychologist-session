@@ -64,7 +64,7 @@ class Bracelet(BraceletBase):
 class NotificationBase(BaseModel):
     bracelet_id: int
     session_id: int
-    user_id: int
+    message_type: str
 
 class NotificationCreate(NotificationBase):
     pass

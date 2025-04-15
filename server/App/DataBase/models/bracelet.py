@@ -9,7 +9,7 @@ from ..base import Base
 # Модель Браслет (Bracelet)
 class Bracelet(Base):
     __tablename__ = 'bracelets'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     settings = Column(String(255), nullable=False)
     user_id = Column(Integer, ForeignKey('users.id'), unique=True)
 

@@ -23,7 +23,7 @@ class User(Base):
     psychologists = relationship('Psychologist', secondary='user_psychologist', back_populates='users')
     sessions = relationship('Session', back_populates='user')
 
-    # Добавляем property для совместимости с вашим кодом
+    # Добавляем property для совместимости
     @property
     def hashed_password(self):
         return self.password

@@ -9,7 +9,7 @@ from ..base import Base
 # Модель Психолог (Psychologist)
 class Psychologist(Base):
     __tablename__ = 'psychologists'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     full_name = Column(String(100), nullable=False)
     specialty = Column(String(100), nullable=False)
     rating = Column(Float, nullable=False)
