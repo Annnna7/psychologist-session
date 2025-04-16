@@ -6,6 +6,7 @@ from datetime import datetime
 from server.app.dataBase.sessions import get_db
 from server.app.dataBase.models.user import User
 from server.app.api.schemas import UserCreate, User as UserSchema
+from server.app.api.deps import get_current_user
 
 router = APIRouter()
 
@@ -36,12 +37,13 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
 def read_users(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     return db.query(User).offset(skip).limit(limit).all()
 
 @router.get("/{user_id}", response_model=UserSchema)
-def read_user(user_id: int, db: Session = Depends(get_db)):
+def read_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -51,7 +53,8 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
 def update_user(
     user_id: int,
     user_data: UserCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
 ):
     db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user:
@@ -78,7 +81,7 @@ def update_user(
     return db_user
 
 @router.delete("/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

@@ -1,14 +1,20 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, field_validator, Field
 from datetime import datetime
 from typing import List, Optional
 
 class UserBase(BaseModel):
-    full_name: str
-    username: str
-    password: str   # Обязательное поле
+    full_name: str = Field(..., min_length=2, max_length=100)
+    username: str = Field(..., min_length=3, max_length=50, pattern="^[a-zA-Z0-9_]+$")
+    password: str   
 
 class UserCreate(UserBase):
-    password: str
+    password: str = Field(..., min_length=8)
+    
+    @field_validator('password')
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
 
 class User(UserBase):
     id: int

@@ -1,9 +1,12 @@
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from contextlib import contextmanager
 from sqlalchemy import text
 import logging
+
+from server.app.middleware.auth_middleware import AuthMiddleware
 
 # Настройка логгера
 logging.basicConfig(level=logging.INFO)
@@ -44,6 +47,8 @@ app = FastAPI(
     title="Psychologist Session API",
     version="1.0.0"
 )
+
+app.add_middleware(AuthMiddleware)
 
 # Инициализация при старте
 @app.on_event("startup")
