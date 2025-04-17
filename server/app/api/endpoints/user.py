@@ -1,12 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
 
+from server.app.api.deps import  add_to_blacklist, SECRET_KEY, ALGORITHM
 from server.app.dataBase.sessions import get_db
 from server.app.dataBase.models.user import User
-from server.app.api.schemas import UserCreate, User as UserSchema
+from server.app.api.schemas import UserCreate, User as UserSchema, PasswordChange
 from server.app.api.deps import get_current_user
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
 
 router = APIRouter()
 
@@ -89,3 +94,31 @@ def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User 
     db.delete(user)
     db.commit()
     return {"message": "User deleted successfully"}
+
+@router.post("/change-password", response_model=UserSchema)
+def change_password(
+    password_data: PasswordChange,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Проверяем старый пароль
+    if not current_user.verify_password(password_data.old_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect old password"
+        )
+    
+    # Обновляем пароль
+    current_user.set_password(password_data.new_password)
+    db.commit()
+    db.refresh(current_user)
+    
+    return current_user
+
+@router.post("/logout")
+def logout(
+    token: str = Depends(oauth2_scheme),
+    current_user: User = Depends(get_current_user)
+):
+    add_to_blacklist(token)
+    return {"message": "Вы успешно вышли из системы"}

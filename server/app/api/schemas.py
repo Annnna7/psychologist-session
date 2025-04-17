@@ -23,6 +23,10 @@ class User(UserBase):
     class Config:
         from_attributes = True
 
+class PasswordChange(BaseModel):
+    old_password: str
+    new_password: str
+
 class PsychologistBase(BaseModel):
     full_name: str
     specialty: str

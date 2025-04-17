@@ -5,7 +5,7 @@ from typing import Optional, List, Callable, Awaitable
 from starlette.middleware.base import BaseHTTPMiddleware
 import re
 
-from server.app.api.deps import SECRET_KEY, ALGORITHM
+from server.app.api.deps import SECRET_KEY, ALGORITHM, is_token_revoked
 
 class AuthMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, exempt_routes: Optional[List[str]] = None):
@@ -34,6 +34,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
             )
         
         token = auth_header.split(" ")[1]
+
+        if is_token_revoked(token):  # Новая проверка
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Token revoked"}
+            )
+    
         try:
             jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         except JWTError:
