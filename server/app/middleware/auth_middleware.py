@@ -11,6 +11,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, exempt_routes: Optional[List[str]] = None):
         super().__init__(app)
         self.exempt_routes = exempt_routes or [
+            "/",           
+            "/docs",
+            "/redoc",
+            "/openapi.json",
             "/api/docs",
             "/api/openapi.json",
             "/api/token",

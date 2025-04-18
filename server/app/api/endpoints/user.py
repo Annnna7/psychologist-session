@@ -9,7 +9,7 @@ from server.app.api.deps import  add_to_blacklist, SECRET_KEY, ALGORITHM
 from server.app.dataBase.sessions import get_db
 from server.app.dataBase.models.user import User
 from server.app.api.schemas import UserCreate, User as UserSchema, PasswordChange
-from server.app.api.deps import get_current_user
+from server.app.api.deps import get_current_user, get_admin_user, check_self_or_admin
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
 
@@ -29,7 +29,8 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = User(
         full_name=user.full_name,
         username=user.username,
-        registration_date=datetime.now()
+        registration_date=datetime.now(), 
+        is_admin=False
     )
     db_user.set_password(user.password)
     
@@ -38,17 +39,25 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db.refresh(db_user)
     return db_user
 
-@router.get("/", response_model=List[UserSchema])
+@router.get("/", response_model=List[UserSchema], dependencies=[Depends(get_admin_user)])
 def read_users(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
+    db: Session = Depends(get_db)
+    ):
     return db.query(User).offset(skip).limit(limit).all()
 
 @router.get("/{user_id}", response_model=UserSchema)
-def read_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def read_user(
+    user_id: int, db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+    ):
+    if not current_user.is_admin and current_user.id != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only access your own data"
+        )
+        
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -61,6 +70,12 @@ def update_user(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
+    if not current_user.is_admin and current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only update your own profile"
+        )
+        
     db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -85,8 +100,8 @@ def update_user(
     db.refresh(db_user)
     return db_user
 
-@router.delete("/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.delete("/{user_id}", dependencies=[Depends(get_admin_user)])
+def delete_user(user_id: int, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -121,4 +136,4 @@ def logout(
     current_user: User = Depends(get_current_user)
 ):
     add_to_blacklist(token)
-    return {"message": "Вы успешно вышли из системы"}
+    return {"message": "You have successfully logged out"}

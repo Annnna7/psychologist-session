@@ -64,3 +64,19 @@ def add_to_blacklist(token: str, expires_delta: timedelta = None):
             token_blacklist[token] = datetime.utcnow() + timedelta(minutes=15)
     except JWTError:
         pass
+
+def get_admin_user(current_user: User = Depends(get_current_user)):
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin rights are required"
+        )
+    return current_user
+
+def check_self_or_admin(user_id: int, current_user: User = Depends(get_current_user)):
+    if not current_user.is_admin and current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only work with your account"
+        )
+    return current_user
