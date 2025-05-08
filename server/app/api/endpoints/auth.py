@@ -7,7 +7,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 import os
 from dotenv import load_dotenv
-
+from pydantic import SecretStr
 # Импортируем из database.py
 from server.app.main import get_db
 from server.app.dataBase.models.user import User
@@ -17,7 +17,9 @@ load_dotenv()
 
 router = APIRouter()
 
-SECRET_KEY = os.getenv("SECRET_KEY") or "fallback-secret-key"
+SECRET_KEY = SecretStr(os.getenv("SECRET_KEY"))
+if not SECRET_KEY.get_secret_value():
+    raise RuntimeError("SECRET_KEY не задан в .env!")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -46,12 +48,12 @@ def authenticate_user(username: str, password: str, db: Session):
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
-    if expires_delta:
+    if expires_delta: 
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(to_encode, SECRET_KEY.get_secret_value(), algorithm=ALGORITHM)
 
 @router.post("/token", response_model=Token)
 def login_for_access_token(
