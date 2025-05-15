@@ -18,6 +18,7 @@ class User(Base):
     password = Column(String(100), nullable=False)
     registration_date = Column(DateTime, nullable=False)
     is_admin = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
 
     # Связи
     bracelet = relationship('Bracelet', back_populates='user', uselist=False)

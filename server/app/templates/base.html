@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Psychologist Sessions{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">PsychoApp</a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="/login">Вход</a>
+                <a class="nav-link" href="/register">Регистрация</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Скрипт для автоматической подстановки токена -->
+    <script>
+        const token = localStorage.getItem('access_token');
+        if (token) {
+            const originalFetch = window.fetch;
+            window.fetch = async (url, options = {}) => {
+                options.headers = {
+                    ...options.headers,
+                    'Authorization': `Bearer ${token}`
+                };
+                return originalFetch(url, options);
+            };
+        }
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

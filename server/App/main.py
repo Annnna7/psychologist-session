@@ -1,10 +1,15 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from contextlib import contextmanager
 from sqlalchemy import text
 import logging
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pathlib import Path
+from server.app.dataBase.base import settings
+from fastapi.middleware.cors import CORSMiddleware 
 
 from server.app.middleware.auth_middleware import AuthMiddleware
 
@@ -69,14 +74,37 @@ app.include_router(session.router, prefix="/api/sessions", tags=["Сессии"]
 app.include_router(notification.router, prefix="/api/notifications", tags=["Уведомления"])
 app.include_router(bracelet.router, prefix="/api/bracelets", tags=["Браслеты"])
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.get("/", include_in_schema=False)
-async def root():
-    return {
-        "message": "Добро пожаловать в Psychologist Session API",
-        "docs": "/docs",
-        "redoc": "/redoc"
-    }
+async def home(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+print("Текущие настройки:")
+print(f"Algorithm: {settings.ALGORITHM}")
+print(f"Token expires in: {settings.ACCESS_TOKEN_EXPIRE_MINUTES} minutes")
+
+# Настройка путей
+BASE_DIR = Path(__file__).resolve().parent
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+
+
+@app.get("/login")
+async def login_page(request: Request):
+    return templates.TemplateResponse("auth/login.html", {"request": request})
+
+@app.get("/register")
+async def register_page(request: Request):
+    return templates.TemplateResponse("auth/register.html", {"request": request})
+

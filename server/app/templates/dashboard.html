@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Панель управления{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Добро пожаловать, {{ user.full_name }}!</h1>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            Ваши сессии
+        </div>
+        <div class="card-body">
+            {% if sessions %}
+            <ul class="list-group">
+                {% for session in sessions %}
+                <li class="list-group-item">
+                    {{ session.date }} - {{ session.patient_name }}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>У вас пока нет запланированных сессий</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<script>
+// Проверяем истечение сессии при загрузке страницы
+document.addEventListener('DOMContentLoaded', () => {
+    // Если сервер вернул 401 
+    fetch('/api/check-auth', {
+        credentials: 'include'
+    })
+    .then(response => {
+        if (response.status === 401) {
+            window.location.href = '/login?error=session_expired';
+        }
+    })
+    .catch(() => {
+        // В случае ошибки сети тоже перенаправляем
+        window.location.href = '/login?error=session_expired';
+    });
+});
+</script>

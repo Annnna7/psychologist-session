@@ -1,25 +1,26 @@
-from fastapi import Request, HTTPException
+from fastapi import Request
 from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
-from typing import Optional, List, Callable, Awaitable
+from typing import Optional, List
 from starlette.middleware.base import BaseHTTPMiddleware
 import re
 
-from server.app.api.deps import SECRET_KEY, ALGORITHM, is_token_revoked
+from server.app.dataBase.base import settings
+from server.app.api.deps import is_token_revoked
 
 class AuthMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, exempt_routes: Optional[List[str]] = None):
         super().__init__(app)
         self.exempt_routes = exempt_routes or [
-            "/",           
+            "/",
             "/docs",
             "/redoc",
             "/openapi.json",
-            "/api/docs",
-            "/api/openapi.json",
             "/api/token",
-            "/api/users/",
-            "/api/health"
+            "/api/register",
+            "/login",
+            "/register",
+            "/static/.*"  # Для статических файлов
         ]
 
     async def dispatch(self, request: Request, call_next):
@@ -29,28 +30,42 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if any(re.fullmatch(pattern, path) for pattern in self.exempt_routes):
             return await call_next(request)
         
-        # Проверяем авторизацию
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
+        # Проверяем авторизацию 
+        token = None
+        
+        # 1. Проверяем куки
+        if "access_token" in request.cookies:
+            token = request.cookies["access_token"].replace("Bearer ", "")
+        
+        # 2. Проверяем Authorization header
+        elif request.headers.get("Authorization"):
+            auth_header = request.headers["Authorization"]
+            if auth_header.startswith("Bearer "):
+                token = auth_header.split(" ")[1]
+        
+        if not token:
             return JSONResponse(
                 status_code=401,
                 content={"detail": "Not authenticated"}
             )
         
-        token = auth_header.split(" ")[1]
-
-        if is_token_revoked(token):  # Новая проверка
+        if is_token_revoked(token):
             return JSONResponse(
                 status_code=401,
                 content={"detail": "Token revoked"}
             )
     
         try:
-            jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        except JWTError:
+            payload = jwt.decode(
+                token,
+                settings.SECRET_KEY.get_secret_value(),
+                algorithms=[settings.ALGORITHM]
+            )
+            request.state.user = payload.get("sub")
+        except JWTError as e:
             return JSONResponse(
                 status_code=401,
-                content={"detail": "Invalid token"}
+                content={"detail": f"Invalid token: {str(e)}"}
             )
         
         return await call_next(request)

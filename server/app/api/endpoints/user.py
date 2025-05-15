@@ -5,7 +5,8 @@ from datetime import datetime
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 
-from server.app.api.deps import  add_to_blacklist, SECRET_KEY, ALGORITHM
+from server.app.api.deps import add_to_blacklist
+from server.app.dataBase.base import settings
 from server.app.dataBase.sessions import get_db
 from server.app.dataBase.models.user import User
 from server.app.api.schemas import UserCreate, User as UserSchema, PasswordChange
@@ -30,7 +31,6 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
         full_name=user.full_name,
         username=user.username,
         registration_date=datetime.now(), 
-        is_admin=False
     )
     db_user.set_password(user.password)
     
