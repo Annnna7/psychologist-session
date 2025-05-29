@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+Found что не так {% extends "base.html" %}
 
 {% block content %}
 <div class="container mt-5">
@@ -16,7 +16,7 @@
             <div class="alert alert-danger">{{ error }}</div>
             {% endif %}
 
-            <form id="login-form" method="post" enctype="application/x-www-form-urlencoded">
+            <form id="login-form" method="post" action="/api/login" enctype="application/x-www-form-urlencoded">
                 <div class="mb-3">
                     <label for="username" class="form-label">Логин</label>
                     <input type="text" class="form-control" id="username" name="username" required>
