@@ -246,6 +246,19 @@ body {
     box-shadow: 0 6px 16px rgba(54, 182, 255, 0.4);
 }
 
+/* уведомления */
+.add-session-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    font-size: 24px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+
 /* Адаптация для мобильных */
 @media (max-width: 768px) {
     .help-row {

@@ -74,3 +74,11 @@ def delete_notification(
     db.delete(notification)
     db.commit()
     return {"message": "Notification deleted successfully"}
+
+@router.get("/user/{user_id}", response_model=List[NotificationSchema])
+def get_user_notifications(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    notifications = db.query(NotificationModel).filter(NotificationModel.bracelet_id == user_id).all()
+    return notifications

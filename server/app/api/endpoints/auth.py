@@ -84,7 +84,7 @@ async def login_for_access_token(
         raise HTTPException(status_code=401, detail="Неверные учетные данные", headers={"Content-Type": "application/json"})
     
     access_token = create_access_token(
-        data={"sub": user.username, "is_admin": user.is_admin},
+        data={"sub": user.username, "user_id": user.id, "is_admin": user.is_admin},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
 
@@ -104,6 +104,15 @@ async def login_for_access_token(
         samesite="lax",
         path="/"
     )
+    response.set_cookie(
+    key="user_id",
+    value=str(user.id),
+    httponly=False,  # ❗ Доступен в JS
+    max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    secure=False,
+    samesite="lax",
+    path="/"
+    )
     return response
 
 @router.post("/login", response_class=HTMLResponse)
@@ -120,7 +129,7 @@ async def login_post(
             {"request": request, "error": "Неверный логин или пароль"}
         )
     access_token = create_access_token(
-        data={"sub": user.username, "is_admin": user.is_admin},
+        data={"sub": user.username, "user_id": user.id, "is_admin": user.is_admin},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     redirect_url = "/api/admin/dashboard" if user.is_admin else "/api/user/dashboard"
@@ -133,6 +142,15 @@ async def login_post(
         secure=False,
         samesite="lax",
         path="/"
+    )
+    response.set_cookie(
+    key="user_id",
+    value=str(user.id),
+    httponly=False,  # ❗ Доступен в JS
+    max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    secure=False,
+    samesite="lax",
+    path="/"
     )
     return response
 
@@ -189,40 +207,6 @@ async def user_dashboard(
         )
     except JWTError:
         return RedirectResponse(url="/api/login", status_code=303)
-
-@router.post("/login", response_class=HTMLResponse)
-async def login_post(
-    request: Request,
-    username: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_db)
-):
-    user = authenticate_user(username, password, db)
-    if not user:
-        # Вернуть страницу логина с ошибкой
-        return templates.TemplateResponse(
-            "auth/login.html",
-            {"request": request, "error": "Неверный логин или пароль"}
-        )
-
-    access_token = create_access_token(
-        data={"sub": user.username, "is_admin": user.is_admin},
-        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    )
-    response = RedirectResponse(
-        url="/api/admin/dashboard" if user.is_admin else "/api/user/dashboard",
-        status_code=303
-    )
-    response.set_cookie(
-        key="access_token",
-        value=f"Bearer {access_token}",
-        httponly=True,
-        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        secure=False,
-        samesite="lax",
-        path="/"
-    )
-    return response
 
 
 @router.get("/login", response_class=HTMLResponse)
