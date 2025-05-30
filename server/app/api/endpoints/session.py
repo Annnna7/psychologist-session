@@ -5,20 +5,19 @@ from typing import List
 from server.app.dataBase.sessions import get_db
 from server.app.dataBase.models.session import Session as SessionModel
 from server.app.api.schemas import SessionCreate, Session as SessionSchema
+from server.app.api.deps import get_current_user
 
-router = APIRouter(prefix="/sessions", tags=["sessions"])
+router = APIRouter(tags=["sessions"])
 
 @router.post("/", response_model=SessionSchema)
 def create_session(
     session_data: SessionCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
 ):
-    """
-    Create a new therapy session
-    """
     try:
         db_session = SessionModel(
-            user_id=session_data.user_id,
+            user_id=current_user.id,
             psychologist_id=session_data.psychologist_id,
             date_time=session_data.date_time,
             duration=session_data.duration,
