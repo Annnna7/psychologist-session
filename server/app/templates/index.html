@@ -2,6 +2,104 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Добро пожаловать в Psychologist Session!</h1>
-<a href="/login" class="btn btn-primary">Войти</a>
+<section class="banner">
+    <div class="container banner__container" style="display: flex; align-items: center; gap: 24px;">
+        <div class="banner__content" style="flex: 1;">
+            <h1 class="banner__title">Консультации<br> с психологом онлайн:<br>
+                <marquee behavior="scroll" direction="up" scrollamount="2" class="slow-blue-marquee">
+                    повысить качество жизни<br>
+                    справиться со стрессом<br>
+                    наладить отношения с близкими<br>
+                    найти своё призвание<br>
+                    принять себя<br>
+                    обрести спокойствие
+                </marquee>
+            </h1>
+        </div>
+        <div class="banner__image" style="flex-shrink: 0;">
+            <img src="\static\images\1.jpg" alt="Психолог"
+                style="max-width: 600px; width: 100%; height: auto; border-radius: 12px;">
+        </div>
+    </div>
+</section>
+
+<section class="psycho-help">
+    <div class="container">
+        <h2 class="section-title">С чем <span>поможет</span> психолог?</h2>
+        
+        <div class="help-grid">
+            <!-- Первая строка -->
+            <div class="help-row">
+                <!-- Колонка 1 -->
+                <div class="help-card">
+                    <div class="help-image">
+                        <img src="/static/images/2.png" alt="Отношения">
+                    </div>
+                    <div class="help-content">
+                        <h3>Гармоничные отношения</h3>
+                        <p>Наладить отношения с близкими людьми</p>
+                    </div>
+                </div>
+                
+                <!-- Колонка 2 -->
+                <div class="help-card">
+                    <div class="help-image">
+                        <img src="/static/images/3.png" alt="Стресс">
+                    </div>
+                    <div class="help-content">
+                        <h3>Стресс и тревога</h3>
+                        <p>Справиться со стрессом, тревогой и страхом</p>
+                    </div>
+                </div>
+                
+                <!-- Колонка 3 -->
+                <div class="help-card">
+                    <div class="help-image">
+                        <img src="/static/images/4.png" alt="Самооценка">
+                    </div>
+                    <div class="help-content">
+                        <h3>Принятие себя</h3>
+                        <p>Принять себя и повысить самооценку</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Вторая строка -->
+            <div class="help-row">
+                <!-- Колонка 1 -->
+                <div class="help-card">
+                    <div class="help-image">
+                        <img src="/static/images/5.png" alt="Границы">
+                    </div>
+                    <div class="help-content">
+                        <h3>Личные границы</h3>
+                        <p>Научиться говорить "нет" и отстаивать себя</p>
+                    </div>
+                </div>
+                
+                <!-- Колонка 2 -->
+                <div class="help-card">
+                    <div class="help-image">
+                        <img src="/static/images/6.png" alt="Перемены">
+                    </div>
+                    <div class="help-content">
+                        <h3>Жизненные перемены</h3>
+                        <p>Пережить переезд, расставание, потерю работы</p>
+                    </div>
+                </div>
+                
+                <!-- Колонка 3 -->
+                <div class="help-card">
+                    <div class="help-image">
+                        <img src="/static/images/7.png" alt="Работа">
+                    </div>
+                    <div class="help-content">
+                        <h3>Рабочие вопросы</h3>
+                        <p>Понять причины проблем и отсутствия мотивации</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 {% endblock %}

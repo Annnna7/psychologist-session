@@ -1,0 +1,299 @@
+body {
+    font-family: 'Inter', Arial, sans-serif;
+    background: #f6f8fb;
+    margin: 0;
+    color: #222;
+    line-height: 1.5;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* Header styles */
+.header {
+    background: #fff;
+    padding: 24px 0 12px 0;
+    border-bottom: 1px solid #ececec;
+}
+
+.header__container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logo {
+    font-size: 2.2rem;
+    font-weight: bold;
+    color: #36b6ff;
+    letter-spacing: 2px;
+    text-decoration: none;
+}
+
+.nav a {
+    color: #222;
+    text-decoration: none;
+    margin: 0 16px;
+    font-size: 1rem;
+    transition: color 0.2s;
+}
+
+.nav a:hover {
+    color: #36b6ff;
+}
+
+.header__actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.btn {
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 1rem;
+    transition: background 0.2s;
+}
+
+.btn-primary {
+    background: #36b6ff;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #2598d6;
+}
+
+/* Banner styles */
+.banner {
+    padding: 80px 0;
+    background: #f6f8fb;
+}
+
+.banner__container {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+}
+
+.banner__content {
+    flex: 1;
+}
+
+.banner__title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    line-height: 1.3;
+}
+
+.banner__subtitle {
+    color: #36b6ff;
+    display: block;
+}
+
+.banner__image {
+    flex-shrink: 0;
+}
+
+.banner__image img {
+    max-width: 400px;
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.scrolling-wrapper {
+    display: flex;
+    white-space: nowrap;
+    overflow: hidden;
+    animation: scroll 20s linear infinite;
+}
+
+.scrolling-wrapper span {
+    margin-right: 40px;
+    display: inline-block;
+}
+
+.slow-blue-marquee {
+    height: 50px;
+    font-size: 25px;
+    color: #0366d6;
+    line-height: 2;
+    font-family: Arial, sans-serif;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.psycho-help {
+    padding: 40px 0;
+    background: #f9fbfe;
+}
+
+.section-title {
+    font-size: 2.5rem;
+    text-align: center;
+    margin-bottom: 30px;
+    color: #222;
+}
+
+.section-title span {
+    color: #36b6ff;
+}
+
+/* Сетка карточек */
+.help-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.help-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.help-card {
+    flex: 1;
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s;
+}
+
+.help-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+}
+
+.help-image {
+    height: 300px;
+    overflow: hidden;
+}
+
+.help-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s;
+}
+
+.help-card:hover .help-image img {
+    transform: scale(1.05);
+}
+
+.help-content {
+    padding: 25px;
+    text-align: center;
+}
+
+.help-content h3 {
+    color: #36b6ff;
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+}
+
+.help-content p {
+    color: #555;
+    line-height: 1.5;
+}
+
+/* Кнопка CTA */
+.cta-container {
+    text-align: center;
+    margin-top: 50px;
+}
+
+.cta-button {
+    display: inline-block;
+    background: #36b6ff;
+    color: white;
+    padding: 16px 40px;
+    border-radius: 50px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 12px rgba(54, 182, 255, 0.3);
+}
+
+.cta-button:hover {
+    background: #2598d6;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(54, 182, 255, 0.4);
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 768px) {
+    .help-row {
+        flex-direction: column;
+    }
+
+    .section-title {
+        font-size: 2rem;
+        margin-bottom: 40px;
+    }
+
+    .help-image {
+        height: 160px;
+    }
+}
+
+
+@keyframes scroll {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .banner__container {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .banner__image {
+        margin-top: 40px;
+    }
+
+    .banner__title {
+        font-size: 2rem;
+    }
+
+    .header__container {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .nav {
+        margin: 20px 0;
+    }
+}
