@@ -64,7 +64,6 @@ def get_user_from_token(token: str, db: Session) -> User | None:
 
 @router.post("/token")
 async def login_for_access_token(
-    response: Response,
     username: str = Form(...),
     password: str = Form(...),
     db: Session = Depends(get_db)
@@ -73,7 +72,7 @@ async def login_for_access_token(
     if not user:
         raise HTTPException(
             status_code=401,
-            detail="Неверные учетные данные",
+            detail="Неверное имя пользователя или пароль",
             headers={"WWW-Authenticate": "Bearer"}
         )
     
@@ -82,23 +81,13 @@ async def login_for_access_token(
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     
-    response = RedirectResponse(
-        url="/api/admin/dashboard" if user.is_admin else "/api/user/dashboard",
-        status_code=303
-    )
-    
-    response.set_cookie(
-        key="access_token",
-        value=f"Bearer {access_token}",
-        httponly=True,
-        max_age=ACCESS_TOKEN_EXPIRE_MINUTES*60,
-        secure=False,
-        samesite="lax",
-        path="/",
-        domain=None  # Явное указание домена
-    )
-    
-    return response
+    # Возвращаем JSON с токеном и информацией для редиректа
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "is_admin": user.is_admin,
+        "redirect_url": "/api/admin/dashboard" if user.is_admin else "/api/user/dashboard"
+    }
 
 @router.post("/login", response_class=HTMLResponse)
 async def login_post(
@@ -208,6 +197,14 @@ async def register_user(
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
+    # Проверка длины пароля
+    if len(password) < 8:
+        raise HTTPException(
+            status_code=400,
+            detail="Пароль должен содержать минимум 8 символов"
+        )
+    
+    # Проверка уникальности логина
     existing_user = db.query(User).filter(User.username == username).first()
     if existing_user:
         raise HTTPException(
@@ -215,20 +212,31 @@ async def register_user(
             detail="Пользователь с таким логином уже существует"
         )
     
+    # Хеширование пароля
     hashed_password = pwd_context.hash(password)
+    
+    # Создание пользователя
     new_user = User(
         full_name=full_name,
         username=username,
         password=hashed_password,
         registration_date=datetime.utcnow(),
-        is_active=True
+        is_active=True,
+        is_admin=False  # По умолчанию обычный пользователь
     )
     
-    db.add(new_user)
-    db.commit()
+    try:
+        db.add(new_user)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Ошибка при создании пользователя"
+        )
     
     return RedirectResponse(
-        url="/api/login?registration=success",
+        url="/login?registration=success",
         status_code=303
     )
 

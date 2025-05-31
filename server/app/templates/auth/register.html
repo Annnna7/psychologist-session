@@ -10,7 +10,7 @@
             <div class="alert alert-danger">{{ error }}</div>
             {% endif %}
 
-            <form method="post" action="/api/register" enctype="application/x-www-form-urlencoded">
+            <form id="register-form" method="post" action="/api/register">
                 <div class="mb-3">
                     <label for="full_name" class="form-label">Полное имя</label>
                     <input type="text" class="form-control" id="full_name" name="full_name" required>
@@ -18,10 +18,13 @@
                 <div class="mb-3">
                     <label for="username" class="form-label">Логин</label>
                     <input type="text" class="form-control" id="username" name="username" required>
+                    <div id="username-error" class="invalid-feedback"></div>
                 </div>
                 <div class="mb-3">
                     <label for="password" class="form-label">Пароль</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
+                    <input type="password" class="form-control" id="password" name="password" required minlength="8">
+                    <div class="form-text">Пароль должен содержать минимум 8 символов</div>
+                    <div id="password-error" class="invalid-feedback"></div>
                 </div>
                 <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
             </form>
@@ -35,5 +38,76 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/auth.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const registerForm = document.getElementById('register-form');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+
+    registerForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Клиентская валидация
+        let isValid = true;
+        
+        // Проверка пароля
+        if (passwordInput.value.length < 8) {
+            passwordInput.classList.add('is-invalid');
+            document.getElementById('password-error').textContent = 'Пароль должен содержать минимум 8 символов';
+            isValid = false;
+        } else {
+            passwordInput.classList.remove('is-invalid');
+        }
+        
+        if (!isValid) return;
+        
+        try {
+            const formData = new FormData(registerForm);
+            const response = await fetch('/api/register', {
+                method: 'POST',
+                body: new URLSearchParams(formData),
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            });
+            
+            if (response.redirected) {
+                window.location.href = response.url;
+                return;
+            }
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                if (errorData.detail.includes('логин')) {
+                    usernameInput.classList.add('is-invalid');
+                    document.getElementById('username-error').textContent = errorData.detail;
+                } else {
+                    alert(errorData.detail);
+                }
+                return;
+            }
+            
+            // Успешная регистрация
+            window.location.href = '/login?registration=success';
+            
+        } catch (error) {
+            console.error('Registration error:', error);
+            alert('Ошибка соединения с сервером');
+        }
+    });
+    
+    // Сброс ошибок при вводе
+    usernameInput.addEventListener('input', function() {
+        if (this.classList.contains('is-invalid')) {
+            this.classList.remove('is-invalid');
+        }
+    });
+    
+    passwordInput.addEventListener('input', function() {
+        if (this.classList.contains('is-invalid')) {
+            this.classList.remove('is-invalid');
+        }
+    });
+});
+</script>
 {% endblock %}

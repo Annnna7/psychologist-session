@@ -76,30 +76,7 @@
                 </div>
             </div>
         </div>
-        <hr class="my-5">
-        <h1 class="mb-4">Управление клиентами</h1>
-
-        <div class="card">
-            <div class="card-header bg-secondary text-white">
-                Список клиентов
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>ФИО</th>
-                                <th>Логин</th>
-                                <th>Дата регистрации</th>
-                                <th>Действия</th>
-                            </tr>
-                        </thead>
-                        <tbody id="clients-list">
-                            <!-- Клиенты подгружаются через JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        
         </div>
     </div>
 
@@ -136,28 +113,10 @@
             </div>
         </div>
     </div>
-
-    <!-- Модальное окно редактирования клиента -->
     <div class="modal fade" id="editClientModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Редактировать клиента</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="edit-client-form">
-                        <input type="hidden" id="edit-client-id">
-                        <div class="mb-3">
-                            <label for="edit-client-full_name" class="form-label">ФИО</label>
-                            <input type="text" class="form-control" id="edit-client-full_name" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit-client-username" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="edit-client-username" required>
-                        </div>
-                    </form>
-                </div>
+                
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                     <button type="button" class="btn btn-primary" id="save-client-changes">Сохранить</button>
@@ -167,10 +126,12 @@
     </div>
 
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js">
+    </script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const editModal = new bootstrap.Modal('#editModal');
+            const editClientModal = new bootstrap.Modal('#editClientModal');
 
             // Загрузка списка психологов
             async function loadPsychologists() {
@@ -183,7 +144,7 @@
                 }
             }
 
-            // Отображение списка
+            // Отображение списка психологов
             function renderPsychologists(psychologists) {
                 const tbody = document.getElementById('psychologists-list');
                 tbody.innerHTML = '';
@@ -191,23 +152,21 @@
                 psychologists.forEach(psychologist => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-            <td>${psychologist.full_name}</td>
-            <td>${psychologist.specialty}</td>
-            <td><span class="badge badge-rating">${psychologist.rating.toFixed(1)}</span></td>
-            <td>
-                <button class="btn btn-sm btn-outline-primary edit-btn" data-id="${psychologist.id}">
-                    Редакт.
-                </button>
-                <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${psychologist.id}">
-                    Удалить
-                </button>
-            </td>
-        `;
-                    ;
+                        <td>${psychologist.full_name}</td>
+                        <td>${psychologist.specialty}</td>
+                        <td><span class="badge badge-rating">${psychologist.rating.toFixed(1)}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary edit-btn" data-id="${psychologist.id}">
+                                Редакт.
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${psychologist.id}">
+                                Удалить
+                            </button>
+                        </td>
+                    `;
                     tbody.appendChild(tr);
                 });
 
-                // Назначение обработчиков
                 document.querySelectorAll('.edit-btn').forEach(btn => {
                     btn.addEventListener('click', () => openEditForm(btn.dataset.id));
                 });
@@ -243,7 +202,7 @@
                 }
             });
 
-            // Открытие формы редактирования
+            // Открытие формы редактирования психолога
             async function openEditForm(id) {
                 try {
                     const response = await fetch(`/api/psychologists/${id}`);
@@ -260,59 +219,31 @@
                 }
             }
 
-            const editClientModal = new bootstrap.Modal(document.getElementById('editClientModal'));
-
-            async function openEditClientForm(id) {
-                try {
-                    // Получаем токен из localStorage или где у тебя он хранится
-                    const token = localStorage.getItem('access_token'); // пример
-
-                    if (!token) {
-                        alert('Пользователь не авторизован');
-                        return;
-                    }
-
-                    const response = await fetch(`/api/users/${id}`, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
-                    });
-
-
-                    if (!response.ok) throw new Error('Пользователь не найден');
-                    const client = await response.json();
-
-                    document.getElementById('edit-client-id').value = client.id;
-                    document.getElementById('edit-client-full_name').value = client.full_name;
-                    document.getElementById('edit-client-username').value = client.username;
-
-                    editClientModal.show();
-                } catch (e) {
-                    alert('Не удалось загрузить данные клиента');
-                    console.error(e);
-                }
-            }
-
-            document.getElementById('save-client-changes').addEventListener('click', async () => {
-                const id = document.getElementById('edit-client-id').value;
-                const full_name = document.getElementById('edit-client-full_name').value;
-                const username = document.getElementById('edit-client-username').value;
+            // Сохранение изменений психолога
+            document.getElementById('save-changes').addEventListener('click', async () => {
+                const id = document.getElementById('edit-id').value;
+                const full_name = document.getElementById('edit-full_name').value;
+                const specialty = document.getElementById('edit-specialty').value;
+                const rating = parseFloat(document.getElementById('edit-rating').value);
 
                 try {
-                    const response = await fetch(`/api/users/${id}`, {
+                    const response = await fetch(`/api/psychologists/${id}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ full_name, username, password: '' }) // пароль не меняем здесь
+                        body: JSON.stringify({ full_name, specialty, rating })
                     });
+
                     if (response.ok) {
-                        editClientModal.hide();
-                        loadClients();
+                        const editModalInstance = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+                        editModalInstance.hide();
+                        loadPsychologists();
                     } else {
-                        const err = await response.json();
-                        alert('Ошибка: ' + (err.detail || 'неизвестная ошибка'));
+                        const errorData = await response.json();
+                        alert('Ошибка: ' + (errorData.detail || 'Не удалось сохранить изменения'));
                     }
-                } catch (e) {
-                    alert('Ошибка при сохранении изменений');
+                } catch (error) {
+                    console.error('Ошибка при обновлении психолога:', error);
+                    alert('Произошла ошибка при сохранении');
                 }
             });
 
@@ -333,6 +264,7 @@
                 }
             }
 
+            // Выход из системы
             const logoutBtn = document.getElementById('logout-btn');
             if (logoutBtn) {
                 logoutBtn.addEventListener('click', async () => {
@@ -341,8 +273,9 @@
                             method: 'POST',
                             credentials: 'include'
                         });
+                        
                         if (response.ok) {
-                            window.location.href = '/login'; // или '/'
+                            window.location.href = '/login';
                         } else {
                             alert('Ошибка при выходе');
                         }
@@ -351,77 +284,10 @@
                         alert('Ошибка сети при выходе');
                     }
                 });
-            } else {
-                console.warn("Кнопка выхода не найдена!");
             }
 
-            async function loadClients() {
-                try {
-                    const response = await fetch('/api/users/');
-                    if (!response.ok) throw new Error('Ошибка загрузки клиентов');
-                    const clients = await response.json();
-
-                    const tbody = document.getElementById('clients-list');
-                    tbody.innerHTML = '';
-
-                    clients.forEach(client => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                <td>${client.id}</td>
-                <td>${client.full_name}</td>
-                <td>${client.username}</td>
-                <td>${new Date(client.registration_date).toLocaleDateString()}</td>
-                <td>
-                    <button class="btn btn-sm btn-outline-primary edit-client-btn" data-id="${client.id}">Редактировать</button>
-                    <button class="btn btn-sm btn-outline-danger delete-client-btn" data-id="${client.id}">Удалить</button>
-                </td>
-                `
-                            ;
-                        tbody.appendChild(tr);
-                    });
-
-                    // Обработчики кнопок редактирования и удаления
-                    document.querySelectorAll('.edit-client-btn').forEach(btn => {
-                        btn.addEventListener('click', () => openEditClientForm(btn.dataset.id));
-                    });
-                    document.querySelectorAll('.delete-client-btn').forEach(btn => {
-                        btn.addEventListener('click', () => deleteClient(btn.dataset.id));
-                    });
-
-                } catch (error) {
-                    console.error(error);
-                    alert('Не удалось загрузить список клиентов');
-                }
-            }
-
-            // Функция удаления клиента
-            async function deleteClient(id) {
-                if (!confirm('Удалить клиента?')) return;
-                try {
-                    const response = await fetch(`/api/users/${id}`, {
-                        method: 'DELETE'
-                    });
-                    if (response.ok) {
-                        loadClients();
-                    } else {
-                        alert('Ошибка при удалении клиента');
-                    }
-                } catch (e) {
-                    alert('Ошибка при удалении клиента');
-                }
-            }
-
-            function editClient(id) {
-                alert('Здесь будет форма редактирования клиента с ID: ' + id);
-            }
-
-            function manageSessions(userId) {
-                window.location.href = `/admin/user-sessions/${userId}`;
-            }
-
-            // Первоначальная загрузка
+            // Первоначальная загрузка данных
             loadPsychologists();
-            loadClients();
         });
     </script>
 </body>

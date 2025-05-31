@@ -26,7 +26,7 @@
 
     <div class="container">
         <h1 class="mb-4">Добро пожаловать, {{ user.full_name }}!</h1>
-        <div class="row">
+         <div class="container banner__container" style="display: flex; align-items: center; gap: 24px;">
             <div class="col-md-8">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -64,22 +64,10 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header"><h5 class="mb-0">Ближайшая сессия</h5></div>
-                    <div class="card-body">
-                        {% if next_session %}
-                        <div class="alert alert-success">
-                            <h6>{{ next_session.date_time.strftime('%d.%m.%Y %H:%M') }}</h6>
-                            <p>С психологом: {{ next_session.psychologist.full_name }}</p>
-                            <p>Статус: <span class="badge bg-success">{{ next_session.status }}</span></p>
-                        </div>
-                        {% else %}
-                        <div class="alert alert-warning">Нет запланированных сессий</div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
+            <div class="banner__image" style="flex-shrink: 0;">
+            <img src="\static\images\9.jfif" alt="Психолог"
+                style="max-width: 300px; width: 100%; height: auto; border-radius: 12px;">
+        </div>
         </div>
     </div>
 
