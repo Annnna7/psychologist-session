@@ -64,37 +64,29 @@ def get_user_from_token(token: str, db: Session) -> User | None:
 
 @router.post("/token")
 async def login_for_access_token(
+    response: Response,
     username: str = Form(...),
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    if username is None or password is None:
-        try:
-            data = await request.json()
-            username = data.get("username")
-            password = data.get("password")
-        except:
-            pass
-    
-    if not username or not password:
-        raise HTTPException(status_code=400, detail="Требуются username и password") 
-    
     user = authenticate_user(username, password, db)
     if not user:
-        raise HTTPException(status_code=401, detail="Неверные учетные данные", headers={"Content-Type": "application/json"})
+        raise HTTPException(
+            status_code=401,
+            detail="Неверные учетные данные",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
     
     access_token = create_access_token(
         data={"sub": user.username, "user_id": user.id, "is_admin": user.is_admin},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-
-    redirect_url = "/api/admin/dashboard" if user.is_admin else "/api/user/dashboard"
     
-    response = JSONResponse(content={
-        "access_token": access_token,
-        "token_type": "bearer",
-        "redirect_url": "/api/admin/dashboard" if user.is_admin else "/api/user/dashboard"
-    })
+    response = RedirectResponse(
+        url="/api/admin/dashboard" if user.is_admin else "/api/user/dashboard",
+        status_code=303
+    )
+    
     response.set_cookie(
         key="access_token",
         value=f"Bearer {access_token}",
@@ -102,17 +94,10 @@ async def login_for_access_token(
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES*60,
         secure=False,
         samesite="lax",
-        path="/"
+        path="/",
+        domain=None  # Явное указание домена
     )
-    response.set_cookie(
-    key="user_id",
-    value=str(user.id),
-    httponly=False,  # ❗ Доступен в JS
-    max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-    secure=False,
-    samesite="lax",
-    path="/"
-    )
+    
     return response
 
 @router.post("/login", response_class=HTMLResponse)

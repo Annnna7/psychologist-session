@@ -1,6 +1,8 @@
 from pydantic import BaseModel, field_validator, Field
 from datetime import datetime
 from typing import List, Optional
+from pydantic import BaseModel, Field, validator
+from enum import Enum
 
 class UserBase(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=100)
@@ -42,22 +44,47 @@ class Psychologist(PsychologistBase):
     class Config:
         from_attributes = True
 
+class SessionStatus(str, Enum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    CANCELLED = "cancelled"
+    COMPLETED = "completed"
+
 class SessionBase(BaseModel):
-    user_id: int
-    psychologist_id: int
-    date_time: datetime
-    duration: int
-    price: float
-    status: str
+    psychologist_id: int = Field(..., description="ID психолога")
+    date_time: datetime = Field(..., description="Дата и время сеанса")
+    duration: int = Field(..., gt=0, description="Длительность в минутах")
+    price: float = Field(..., gt=0, description="Стоимость сеанса")
+    notes: Optional[str] = Field(None, max_length=1000, description="Дополнительные заметки")
+
+    @validator('date_time')
+    def validate_future_date(cls, v):
+        if v < datetime.now():
+            raise ValueError("Дата сеанса должна быть в будущем")
+        return v
 
 class SessionCreate(SessionBase):
-    pass
+    status: Optional[SessionStatus] = Field(SessionStatus.PENDING, description="Статус сеанса")
 
-class Session(SessionBase):
+class SessionUpdate(BaseModel):
+    date_time: Optional[datetime] = None
+    duration: Optional[int] = Field(None, gt=0)
+    price: Optional[float] = Field(None, gt=0)
+    status: Optional[SessionStatus] = None
+    notes: Optional[str] = None
+
+class SessionSchema(SessionBase):
     id: int
-
+    user_id: int
+    psychologist_id: int
+    status: SessionStatus
+    #created_at: datetime
+    
     class Config:
         from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
 
 class BraceletBase(BaseModel):
     settings: str

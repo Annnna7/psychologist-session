@@ -53,6 +53,15 @@ app = FastAPI(
     version="1.0.0"
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"]
+)
+
 app.add_middleware(AuthMiddleware)
 
 # Инициализация при старте
@@ -73,14 +82,6 @@ app.include_router(psychologist.router, prefix="/api/psychologists", tags=["Пс
 app.include_router(session.router, prefix="/api/sessions", tags=["Сессии"])
 app.include_router(notification.router, prefix="/api/notifications", tags=["Уведомления"])
 app.include_router(bracelet.router, prefix="/api/bracelets", tags=["Браслеты"])
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:8000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 @app.get("/", include_in_schema=False)
 async def home(request: Request):

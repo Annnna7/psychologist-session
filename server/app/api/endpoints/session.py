@@ -1,118 +1,172 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 
 from server.app.dataBase.sessions import get_db
 from server.app.dataBase.models.session import Session as SessionModel
-from server.app.api.schemas import SessionCreate, Session as SessionSchema
-from server.app.api.deps import get_current_user
+from server.app.dataBase.models.user import User 
+from server.app.dataBase.models.psychologist import Psychologist
+from server.app.api.schemas import SessionCreate, SessionSchema, SessionUpdate, SessionStatus
+from server.app.api.deps import get_current_user_from_cookie  # Новый импорт
 
 router = APIRouter(tags=["sessions"])
 
-@router.post("/", response_model=SessionSchema)
-def create_session(
+@router.post("/", response_model=SessionSchema, status_code=status.HTTP_201_CREATED)
+async def create_session(
+    request: Request,
     session_data: SessionCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_from_cookie)
 ):
+    """
+    Создание новой терапевтической сессии
+    - Требуется аутентификация через куки
+    - Статус по умолчанию: 'pending'
+    """
     try:
+        # Проверка существования психолога
+        psychologist = db.query(Psychologist).get(session_data.psychologist_id)
+        if not psychologist:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Психолог не найден"
+            )
+
         db_session = SessionModel(
             user_id=current_user.id,
             psychologist_id=session_data.psychologist_id,
             date_time=session_data.date_time,
             duration=session_data.duration,
             price=session_data.price,
-            status=session_data.status
+            status=session_data.status.value,
+            notes=session_data.notes
         )
         
         db.add(db_session)
         db.commit()
         db.refresh(db_session)
         return db_session
-    except Exception as e:
+        
+    except ValueError as e:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error creating session: {str(e)}"
+            detail=str(e)
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка сервера при создании сессии"
         )
 
 @router.get("/", response_model=List[SessionSchema])
-def read_sessions(
+async def read_sessions(
+    request: Request,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    status: Optional[SessionStatus] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_from_cookie)
 ):
     """
-    Retrieve a list of therapy sessions with pagination
-    - **skip**: Number of items to skip
-    - **limit**: Maximum number of items to return
+    Получение списка сессий текущего пользователя
+    - Фильтрация по статусу (опционально)
+    - Пагинация через skip/limit
     """
-    return db.query(SessionModel)\
-            .order_by(SessionModel.date_time)\
-            .offset(skip)\
-            .limit(limit)\
-            .all()
+    query = db.query(SessionModel).filter(SessionModel.user_id == current_user.id)
+    
+    if status:
+        query = query.filter(SessionModel.status == status.value)
+        
+    return query.order_by(SessionModel.date_time)\
+               .offset(skip)\
+               .limit(limit)\
+               .all()
 
 @router.get("/{session_id}", response_model=SessionSchema)
-def read_session(
+async def read_session(
+    request: Request,
     session_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_from_cookie)
 ):
     """
-    Get detailed information about a specific session by its ID
+    Получение детальной информации о сессии
+    - Доступ только для владельца или администратора
     """
     session = db.query(SessionModel).get(session_id)
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Session not found"
+            detail="Сессия не найдена"
         )
+    
+    if session.user_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Нет доступа к этой сессии"
+        )
+        
     return session
 
 @router.put("/{session_id}", response_model=SessionSchema)
-def update_session(
+async def update_session(
+    request: Request,
     session_id: int,
-    session_data: SessionCreate,
-    db: Session = Depends(get_db)
+    session_data: SessionUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_from_cookie)
 ):
     """
-    Update session information by ID
+    Обновление информации о сессии
+    - Доступ только для владельца или администратора
+    - Частичное обновление разрешено
     """
-    db_session = db.query(SessionModel).get(session_id)
-    if not db_session:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Session not found"
-        )
+    session = db.query(SessionModel).get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Сессия не найдена")
+    
+    if session.user_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Нет прав для обновления")
 
     try:
-        for key, value in session_data.dict().items():
-            setattr(db_session, key, value)
-        
+        update_data = session_data.dict(exclude_unset=True)
+        for field, value in update_data.items():
+            if field == 'status' and value:
+                setattr(session, field, value.value)
+            else:
+                setattr(session, field, value)
+                
         db.commit()
-        db.refresh(db_session)
-        return db_session
+        db.refresh(session)
+        return session
+        
     except Exception as e:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error updating session: {str(e)}"
+            detail=f"Ошибка обновления: {str(e)}"
         )
 
 @router.delete("/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_session(
+async def delete_session(
+    request: Request,
     session_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_from_cookie)
 ):
     """
-    Delete a session by ID
+    Удаление сессии
+    - Доступ только для владельца или администратора
     """
     session = db.query(SessionModel).get(session_id)
     if not session:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Session not found"
-        )
+        raise HTTPException(status_code=404, detail="Сессия не найдена")
+    
+    if session.user_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Нет прав для удаления")
 
     try:
         db.delete(session)
@@ -121,5 +175,5 @@ def delete_session(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error deleting session: {str(e)}"
+            detail=f"Ошибка удаления: {str(e)}"
         )

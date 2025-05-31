@@ -1,4 +1,4 @@
-from fastapi import Request
+from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
 from typing import Optional, List
@@ -20,39 +20,31 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "/api/register",
             "/login",
             "/register",
-            "/static/.*"  # Для статических файлов
+            r"/static/.*",  # Регулярка для статических файлов
+            r"/favicon\.ico"
         ]
+        self.compiled_patterns = [re.compile(pattern) for pattern in self.exempt_routes]
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
         
         # Пропускаем exempt routes
-        if any(re.fullmatch(pattern, path) for pattern in self.exempt_routes):
+        if any(pattern.fullmatch(path) for pattern in self.compiled_patterns):
             return await call_next(request)
         
-        # Проверяем авторизацию 
-        token = None
-        
-        # 1. Проверяем куки
-        if "access_token" in request.cookies:
-            token = request.cookies["access_token"].replace("Bearer ", "")
-        
-        # 2. Проверяем Authorization header
-        elif request.headers.get("Authorization"):
-            auth_header = request.headers["Authorization"]
-            if auth_header.startswith("Bearer "):
-                token = auth_header.split(" ")[1]
+        token = self.extract_token(request)
         
         if not token:
-            return JSONResponse(
+            raise HTTPException(
                 status_code=401,
-                content={"detail": "Not authenticated"}
+                detail="Not authenticated",
+                headers={"WWW-Authenticate": "Bearer"}
             )
         
         if is_token_revoked(token):
-            return JSONResponse(
+            raise HTTPException(
                 status_code=401,
-                content={"detail": "Token revoked"}
+                detail="Token revoked"
             )
     
         try:
@@ -61,11 +53,28 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 settings.SECRET_KEY.get_secret_value(),
                 algorithms=[settings.ALGORITHM]
             )
-            request.state.user = payload.get("sub")
+            request.state.user_id = payload.get("user_id")  # Более полезно чем sub
+            request.state.is_admin = payload.get("is_admin", False)
         except JWTError as e:
-            return JSONResponse(
+            raise HTTPException(
                 status_code=401,
-                content={"detail": f"Invalid token: {str(e)}"}
+                detail=f"Invalid token: {str(e)}"
             )
         
         return await call_next(request)
+
+    def extract_token(self, request: Request) -> Optional[str]:
+        """Извлекает токен из кук или заголовка"""
+        # 1. Проверяем куки
+        if "access_token" in request.cookies:
+            cookie = request.cookies["access_token"]
+            if cookie.startswith("Bearer "):
+                return cookie[7:]  # Удаляем "Bearer "
+            return cookie
+        
+        # 2. Проверяем Authorization header
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            return auth_header.split(" ")[1]
+        
+        return None

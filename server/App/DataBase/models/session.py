@@ -16,6 +16,7 @@ class Session(Base):
     duration = Column(Integer, nullable=False)
     price = Column(Float, nullable=False)
     status = Column(String(50), nullable=False)
+    notes = Column(String, nullable=True)
 
     # Связи
     user = relationship('User', back_populates='sessions')

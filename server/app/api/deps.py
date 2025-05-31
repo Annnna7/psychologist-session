@@ -1,19 +1,80 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from typing import Annotated, Dict, Optional
 from datetime import datetime, timedelta
 from pydantic import ValidationError
+from fastapi.responses import JSONResponse
 
-# Импортируем настройки из base.py
 from server.app.dataBase.base import settings
 from server.app.dataBase.models.user import User
 from server.app.dataBase.sessions import get_db
 from server.app.api.schemas import TokenData
 
-# Используем настройки из settings
+# Для JWT-аутентификации через заголовки
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
+
+# Для cookie-based аутентификации
+def get_current_user_from_cookie(
+    request: Request,
+    db: Session = Depends(get_db)
+) -> User:
+    """Получаем пользователя из куки access_token"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    # Получаем куку
+    cookie = request.cookies.get("access_token")
+    if not cookie:
+        raise credentials_exception
+    
+    # Обрабатываем токен
+    token = None
+    try:
+        # Удаляем "Bearer " если есть
+        token = cookie.replace("Bearer ", "") if cookie.startswith("Bearer ") else cookie
+        
+        # Проверка на отозванный токен
+        if is_token_revoked(token):
+            raise credentials_exception
+        
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY.get_secret_value(),
+            algorithms=[settings.ALGORITHM]
+        )
+        print("Декодированный payload:", payload)  # Для отладки
+        
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        
+        token_data = TokenData(username=username)
+    except (JWTError, ValidationError) as exc:
+        print(f"[AUTH ERROR] Cookie token validation failed: {exc}")
+        print(f"Проблемный токен: {token}")  # Выводим токен для отладки
+        raise credentials_exception
+    except Exception as exc:
+        print(f"[UNEXPECTED AUTH ERROR]: {exc}")
+        raise credentials_exception
+    
+    user = db.query(User).filter(User.username == token_data.username).first()
+    if user is None:
+        print(f"[AUTH ERROR] User {token_data.username} not found")
+        raise credentials_exception
+    
+    if not user.is_active:
+        print(f"[AUTH WARNING] Inactive user {user.username} tried to access")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Inactive user"
+        )
+    
+    return user
 
 # Черный список токенов 
 token_blacklist: Dict[str, datetime] = {}
@@ -56,14 +117,6 @@ async def get_current_user(
     if user is None:
         print(f"[AUTH ERROR] User {token_data.username} not found")
         raise credentials_exception
-    
-    # Проверка активного статуса пользователя
-    if not user.is_active:
-        print(f"[AUTH WARNING] Inactive user {user.username} tried to access")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user"
-        )
     
     return user
 
